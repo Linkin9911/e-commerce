@@ -1,0 +1,22 @@
+{
+  "categories": [
+    {
+      "name": "Электроника",
+      "description": "Электронные устройства",
+      "products": [
+        {
+          "name": "Смартфон",
+          "description": "Современный смартфон",
+          "price": 29999.99,
+          "quantity": 10
+        },
+        {
+          "name": "Ноутбук",
+          "description": "Мощный ноутбук",
+          "price": 59999.99,
+          "quantity": 5
+        }
+      ]
+    }
+  ]
+}
