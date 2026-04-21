@@ -9,7 +9,7 @@ class Product:
     Attributes:
         name (str): название товара.
         description (str): описание товара.
-        price (float): цена товара.
+        __price (float): приватный атрибут цены товара.
         quantity (int): количество товара на складе.
     """
 
@@ -20,13 +20,64 @@ class Product:
         Args:
             name (str): название товара.
             description (str): описание товара.
-            price (float): цена товара.
+            price (float): цена товара (должна быть положительной).
             quantity (int): количество товара на складе.
         """
         self.name = name
         self.description = description
-        self.price = price
+        self.__price = price  # приватный атрибут цены
         self.quantity = quantity
+
+    @property
+    def price(self) -> float:
+        """Геттер для приватного атрибута __price.
+
+        Returns:
+            float: текущая цена товара.
+        """
+        return self.__price
+
+    @price.setter
+    def price(self, value: float):
+        """Сеттер для установки цены с проверкой.
+
+        При снижении цены запрашивает подтверждение пользователя.
+
+        Args:
+            value (float): новая цена товара.
+        """
+        if value <= 0:
+            print("Цена не должна быть нулевая или отрицательная")
+        else:
+            # Проверка, существует ли уже атрибут __price
+            if hasattr(self, "_Product__price") and value < self.__price:
+                confirmation = input("Цена понижается. Подтвердить (y/n)? ")
+                if confirmation.lower() == "y":
+                    self.__price = value
+            else:
+                self.__price = value
+
+    @classmethod
+    def new_product(
+        cls, product_data: dict, products_list: Optional[List["Product"]] = None
+    ) -> "Product":
+        name = product_data.get("name", "Без названия")
+        description = product_data.get("description", "Без описания")
+        price = product_data.get("price", 0.0)
+        quantity = product_data.get("quantity", 0)
+
+        # Проверка на дубликаты
+        if products_list:
+            for existing_product in products_list:
+                if existing_product.name == name:
+                    # Складываем количества
+                    existing_product.quantity += quantity
+                    # Выбираем максимальную цену
+                    if price > existing_product.price:
+                        existing_product.price = price
+                    return existing_product
+
+        return cls(name, description, price, quantity)
 
 
 class Category:
@@ -36,11 +87,9 @@ class Category:
     Attributes:
         name (str): название категории.
         description (str): описание категории.
-        products (List[Product]): список товаров в категории.
-
-    Class Attributes:
-        category_count (int): общее количество созданных категорий.
-        product_count (int): общее количество товаров во всех категориях.
+        __products (List[Product]): приватный список товаров в категории.
+        category_count (int): общее количество созданных категорий (класс-атрибут).
+        product_count (int): общее количество товаров во всех категориях (класс-атрибут).
     """
 
     category_count: int = 0
@@ -49,41 +98,67 @@ class Category:
     def __init__(
         self, name: str, description: str, products: Optional[List[Product]] = None
     ):
-        """
-        Инициализирует объект Category.
+        """Инициализирует объект Category.
 
         Args:
             name (str): название категории.
             description (str): описание категории.
-            products (Optional[List[Product]], optional): список товаров в категории. По умолчанию — пустой список.
+            products (Optional[List[Product]], optional): список товаров в категории.
+                Если None, создаётся пустой список.
         """
         if products is None:
             products = []
 
         self.name = name
         self.description = description
-        self.products = products
+        self.__products = products  # приватный атрибут
 
-        # Увеличиваем счётчик категорий
         Category.category_count += 1
-        # Увеличиваем счётчик товаров на сумму количеств всех товаров в текущей категории
         Category.product_count += sum(product.quantity for product in products)
+
+    def add_product(self, product: Product):
+        """Добавляет продукт в категорию и увеличивает счётчик товаров.
+
+        Args:
+            product (Product): объект товара для добавления.
+        """
+        self.__products.append(product)
+        Category.product_count += product.quantity
+
+    @property
+    def products(self) -> str:
+        """Геттер для получения форматированного списка товаров.
+
+        Returns:
+            str: строка с описанием всех товаров в категории в формате:
+                  "Название, Цена руб. Остаток: Количество шт.\n"
+        """
+        result = ""
+        for product in self.__products:
+            result += f"{product.name}, {product.price} руб. Остаток: {product.quantity} шт.\n"
+        return result
+
+    def get_products_list(self) -> List[Product]:
+        """Возвращает внутренний список товаров (для тестирования).
+
+        Returns:
+            List[Product]: список объектов Product в категории.
+        """
+        return self.__products
 
 
 def load_data_from_json(filename: str) -> List[Category]:
-    """
-    Загружает данные о категориях и товарах из JSON‑файла и создаёт объекты классов.
+    """Загружает данные о категориях и товарах из JSON‑файла и создаёт объекты классов.
 
     Args:
         filename (str): путь к JSON‑файлу.
 
     Returns:
-        List[Category]: список объектов Category, созданных на основе данных из файла.
+        List[Category]: список объектов Category с загруженными данными.
 
     Raises:
         FileNotFoundError: если файл не найден.
-        json.JSONDecodeError: если файл содержит некорректный JSON.
-        KeyError: если в JSON отсутствуют ожидаемые ключи.
+        json.JSONDecodeError: если JSON в файле некорректный.
     """
     try:
         with open(filename, "r", encoding="utf-8") as file:
@@ -96,15 +171,14 @@ def load_data_from_json(filename: str) -> List[Category]:
         )
 
     categories: List[Category] = []
-
-    # Безопасная обработка отсутствия ключа 'categories'
     if "categories" not in data:
         return categories
 
     for category_data in data["categories"]:
         products: List[Product] = []
-        # Безопасная обработка отсутствия ключа 'products'
-        if "products" in category_data:
+
+        # Проверяем наличие секции "products" и её непустоту
+        if "products" in category_data and category_data["products"]:
             for product_data in category_data["products"]:
                 product = Product(
                     name=product_data.get("name", "Без названия"),
@@ -131,44 +205,35 @@ if __name__ == "__main__":  # pragma: no cover
     product2 = Product("Iphone 15", "512GB, Gray space", 210000.0, 8)
     product3 = Product("Xiaomi Redmi Note 11", "1024GB, Синий", 31000.0, 14)
 
-    print(product1.name)
-    print(product1.description)
-    print(product1.price)
-    print(product1.quantity)
-
-    print(product2.name)
-    print(product2.description)
-    print(product2.price)
-    print(product2.quantity)
-
-    print(product3.name)
-    print(product3.description)
-    print(product3.price)
-    print(product3.quantity)
-
     category1 = Category(
         "Смартфоны",
         "Смартфоны, как средство не только коммуникации, но и получения дополнительных функций для удобства жизни",
         [product1, product2, product3],
     )
 
-    print(category1.name == "Смартфоны")
-    print(category1.description)
-    print(len(category1.products))
-    print(Category.category_count)
-    print(Category.product_count)
-
+    print(category1.products)
     product4 = Product('55" QLED 4K', "Фоновая подсветка", 123000.0, 7)
-    category2 = Category(
-        "Телевизоры",
-        "Современный телевизор, который позволяет наслаждаться просмотром, станет вашим другом и помощником",
-        [product4],
+    category1.add_product(product4)
+    print(category1.products)
+    print(category1.product_count)
+
+    new_product = Product.new_product(
+        {
+            "name": "Samsung Galaxy S23 Ultra",
+            "description": "256GB, Серый цвет, 200MP камера",
+            "price": 180000.0,
+            "quantity": 5,
+        }
     )
+    print(new_product.name)
+    print(new_product.description)
+    print(new_product.price)
+    print(new_product.quantity)
 
-    print(category2.name)
-    print(category2.description)
-    print(len(category2.products))
-    print(category2.products)
+    new_product.price = 800
+    print(new_product.price)
 
-    print(Category.category_count)
-    print(Category.product_count)
+    new_product.price = -100
+    print(new_product.price)
+    new_product.price = 0
+    print(new_product.price)
