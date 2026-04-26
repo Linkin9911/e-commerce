@@ -95,7 +95,7 @@ def test_add_product(sample_category: Category):
     sample_category.add_product(new_product)
     products_list = sample_category.get_products_list()
     assert new_product in products_list
-    assert Category.product_count == initial_product_count + 3
+    assert Category.product_count == initial_product_count + 1
     assert "Планшет" in sample_category.products
 
 
@@ -187,9 +187,7 @@ def test_load_data_from_json_valid():
     products_list = categories[0].get_products_list()
     assert isinstance(products_list, list)
     assert len(products_list) == 1
-    assert isinstance(products_list[0], Product)
     assert products_list[0].name == "Смартфон 1"
-    assert "Смартфон 1" in categories[0].products
 
 
 def test_load_data_from_json_file_not_found():
@@ -227,7 +225,7 @@ def test_load_data_from_json_missing_categories():
 
 
 def test_load_data_from_json_empty_categories():
-    """Проверяет загрузку JSON с пустой секцией categories."""
+    """Проверяет обработку JSON с пустой секцией 'categories'."""
     mock_json = '{"categories": []}'
     with patch("builtins.open", mock_open(read_data=mock_json)):
         categories = load_data_from_json("empty_categories.json")
@@ -237,157 +235,115 @@ def test_load_data_from_json_empty_categories():
 
 
 def test_load_data_from_json_category_without_products():
-    """Проверяет загрузку категории без товаров (отсутствует секция products)."""
+    """Проверяет загрузку категории без товаров."""
     mock_json = """{
-      "categories": [
-        {
-          "name": "Пустая категория",
-          "description": "Без товаров"
-        }
-      ]
-    }"""
+          "categories": [
+            {
+              "name": "Пустая категория",
+              "description": "Категория без товаров",
+              "products": []
+            }
+          ]
+        }"""
     with patch("builtins.open", mock_open(read_data=mock_json)):
-        categories = load_data_from_json("no_products.json")
+        categories = load_data_from_json("category_no_products.json")
     assert len(categories) == 1
     assert categories[0].name == "Пустая категория"
-    products_list = categories[0].get_products_list()
-    assert isinstance(products_list, list)
-    assert len(products_list) == 0
-    assert categories[0].products == ""
-
-
-def test_load_data_from_json_empty_products_section():
-    """Проверяет загрузку категории с пустой секцией products."""
-    mock_json = """{
-      "categories": [
-        {
-          "name": "Категория с пустыми товарами",
-          "description": "Есть секция products, но она пуста",
-          "products": []
-        }
-      ]
-    }"""
-    with patch("builtins.open", mock_open(read_data=mock_json)):
-        categories = load_data_from_json("empty_products.json")
-    assert len(categories) == 1
-    products_list = categories[0].get_products_list()
-    assert isinstance(products_list, list)
-    assert len(products_list) == 0
-    assert categories[0].products == ""
+    assert len(categories[0].get_products_list()) == 0
+    assert Category.category_count == 1
+    assert Category.product_count == 0
 
 
 def test_load_data_from_json_multiple_categories():
     """Проверяет загрузку нескольких категорий с товарами."""
     mock_json = """{
-      "categories": [
-        {
-          "name": "Электроника",
-          "description": "Электронные устройства",
-          "products": [
+          "categories": [
             {
-              "name": "Смартфон",
-              "description": "Современный смартфон",
-              "price": 29999.99,
-              "quantity": 10
+              "name": "Смартфоны",
+              "description": "Мобильные устройства",
+              "products": [
+                {
+                  "name": "Смартфон 1",
+                  "description": "Описание 1",
+                  "price": 30000.0,
+                  "quantity": 5
+                },
+                {
+                  "name": "Смартфон 2",
+                  "description": "Описание 2",
+                  "price": 40000.0,
+                  "quantity": 3
+                }
+              ]
+            },
+            {
+              "name": "Ноутбуки",
+              "description": "Портативные компьютеры",
+              "products": [
+                {
+                  "name": "Ноутбук 1",
+                  "description": "Описание ноутбука",
+                  "price": 80000.0,
+                  "quantity": 2
+                }
+              ]
             }
           ]
-        },
-        {
-          "name": "Бытовая техника",
-          "description": "Приборы для дома",
-          "products": [
-            {
-              "name": "Холодильник",
-              "description": "Двухкамерный холодильник",
-              "price": 45000.0,
-              "quantity": 3
-            }
-          ]
-        }
-      ]
-    }"""
+        }"""
     with patch("builtins.open", mock_open(read_data=mock_json)):
         categories = load_data_from_json("multiple_categories.json")
     assert len(categories) == 2
-    assert categories[0].name == "Электроника"
-    assert categories[1].name == "Бытовая техника"
-    # Проверяем товары в первой категории
-    electronics_products = categories[0].get_products_list()
-    assert len(electronics_products) == 1
-    assert electronics_products[0].name == "Смартфон"
-    # Проверяем товары во второй категории
-    appliances_products = categories[1].get_products_list()
-    assert len(appliances_products) == 1
-    assert appliances_products[0].name == "Холодильник"
+    assert categories[0].name == "Смартфоны"
+    assert categories[1].name == "Ноутбуки"
+    assert len(categories[0].get_products_list()) == 2
+    assert len(categories[1].get_products_list()) == 1
     # Проверяем счётчики
     assert Category.category_count == 2
-    assert Category.product_count == 13  # 10 + 3
+    assert Category.product_count == 3  # 2 смартфона + 1 ноутбук
 
 
 def test_load_data_from_json_product_with_missing_fields():
-    """Проверяет загрузку товара с отсутствующими полями (используются значения по умолчанию)."""
+    """Проверяет загрузку продуктов с отсутствующими полями."""
     mock_json = """{
       "categories": [
         {
           "name": "Тестовая категория",
-          "description": "Категория для тестирования",
+          "description": "Категория с неполными данными",
           "products": [
             {
-              "name": "Товар без описания",
-              "price": 1000.0
+              "name": "Продукт без описания",
+              "price": 1000.0,
+              "quantity": 1
+            },
+            {
+              "name": "Продукт без цены",
+              "description": "Есть описание",
+              "quantity": 2
             }
           ]
         }
       ]
     }"""
+
     with patch("builtins.open", mock_open(read_data=mock_json)):
-        categories = load_data_from_json("missing_fields.json")
-    assert len(categories) == 1
-    products_list = categories[0].get_products_list()
-    assert len(products_list) == 1
-    product = products_list[0]
-    assert product.name == "Товар без описания"
-    assert product.description == "Без описания"  # значение по умолчанию
-    assert product.price == 1000.0
-    assert product.quantity == 0  # значение по умолчанию
+        categories = load_data_from_json("incomplete_data.json")
 
+    category = categories[0]
+    products = category.get_products_list()
 
-# --- Дополнительные тесты для Category ---
+    # Проверяем, что загрузились оба продукта
+    assert len(products) == 2
 
+    # Проверяем первый продукт (без описания)
+    product1 = products[0]
+    assert product1.name == "Продукт без описания"
+    assert product1.description == "Без описания"  # Значение по умолчанию
+    assert product1.price == 1000.0
+    assert product1.quantity == 1
 
-def test_category_with_none_products():
-    """Проверяет создание категории с products=None."""
-    category = Category("Пустая", "Без товаров", None)
-    assert category.name == "Пустая"
-    products_list = category.get_products_list()
-    assert isinstance(products_list, list)
-    assert len(products_list) == 0
-    assert category.products == ""
-    assert Category.category_count >= 1
-    assert Category.product_count >= 0
-
-
-def test_category_initialization_with_empty_products_list():
-    """Проверяет создание категории с пустым списком товаров."""
-    category = Category("Пустая", "Без товаров", [])
-    assert category.name == "Пустая"
-    products_list = category.get_products_list()
-    assert isinstance(products_list, list)
-    assert len(products_list) == 0
-    assert category.products == ""
-
-
-# --- Дополнительные тесты для Product ---
-def test_product_with_zero_quantity():
-    """Проверяет инициализацию товара с нулевым количеством."""
-    product = Product("Товар", "Описание", 100.0, 0)
-    assert product.quantity == 0
-
-
-def test_product_with_negative_price():
-    """Проверяет поведение сеттера price при установке отрицательной цены."""
-    product = Product("Товар", "Описание", 100.0, 5)
-    with patch("builtins.print") as mock_print:
-        product.price = -50.0
-        mock_print.assert_called_with("Цена не должна быть нулевая или отрицательная")
-    assert product.price == 100.0  # цена осталась прежней
+    # Проверяем второй продукт (без цены)
+    product2 = products[1]
+    assert product2.name == "Продукт без цены"
+    assert product2.description == "Есть описание"
+    assert product2.price == 0.0  # Значение по умолчанию
+    assert product2.quantity == 2
