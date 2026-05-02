@@ -1,8 +1,54 @@
 import json
 from typing import List, Optional
 
+class CategoryIterator:
+    """
+    Итератор для перебора товаров в категории.
+    Позволяет использовать цикл for для обхода всех продуктов в категории.
+    """
+
+    def __init__(self, category: "Category"):
+        """
+        Инициализирует итератор для указанной категории.
+
+        Args:
+            category (Category): категория, товары которой нужно перебирать.
+        """
+        self._products = category.get_products_list()
+        self._index = 0
+
+    def __iter__(self) -> "CategoryIterator":
+        """
+        Возвращает сам итератор (требуется для протокола итерации).
+
+        Returns:
+            CategoryIterator: сам объект итератора.
+        """
+        return self
+
+    def __next__(self) -> "Product":
+        """
+        Возвращает следующий товар в категории.
+
+        Raises:
+            StopIteration: когда все товары перебраны.
+
+        Returns:
+            Product: следующий объект Product в категории.
+        """
+        if self._index >= len(self._products):
+            raise StopIteration
+        product = self._products[self._index]
+        self._index += 1
+        return product
+
 
 class Product:
+    """
+    Класс для представления продукта в магазине.
+    Содержит информацию о названии, описании, цене и количестве товара.
+    """
+
     def __init__(self, name: str, description: str, price: float, quantity: int):
         """
         Инициализирует объект Product.
@@ -88,16 +134,45 @@ class Product:
                     existing_product.quantity += quantity
                     # Выбираем максимальную цену
                     if price > existing_product.price:
-                        existing_product.price = price  # ← Теперь с правильным отступом
-                    return existing_product  # ← Возвращаем только найденный продукт
+                        existing_product.price = price
+            return existing_product  # Возвращаем только найденный продукт
+
 
         # Если дубликат не найден, создаём новый продукт
         return cls(name, description, price, quantity)
+
+    def __str__(self) -> str:
+        """
+        Возвращает строковое представление продукта.
+
+        Формат: "Название продукта, X руб. Остаток: X шт."
+
+        Returns:
+            str: форматированная строка с информацией о продукте.
+        """
+        return f"{self.name}, {self.price} руб. Остаток: {self.quantity} шт."
+
+    def __add__(self, other: "Product") -> float:
+        """
+        Реализует сложение двух продуктов.
+
+        Возвращает сумму произведений цены на количество для обоих объектов.
+
+        Пример: a + b = a.price * a.quantity + b.price * b.quantity
+
+        Args:
+            other (Product): другой объект Product для сложения.
+
+        Returns:
+            float: общая стоимость всех товаров на складе для двух продуктов.
+        """
+        return self.price * self.quantity + other.price * other.quantity
 
 
 class Category:
     """
     Класс для представления категории товаров.
+    Содержит список продуктов и информацию о категории.
     """
 
     category_count: int = 0
@@ -122,18 +197,15 @@ class Category:
 
         self.name = name
         self.description = description
-        self.__products: List['Product'] = []  # Явная аннотация типа
+        self.__products: List["Product"] = []  # Явная аннотация типа
 
         if products:
-            self.__products.extend(products)
-
-        # Сначала увеличиваем счётчик категорий
-        Category.category_count += 1
-
-        # Теперь добавляем продукты поочерёдно через add_product, чтобы корректно увеличить product_count
-        if products is not None:
+            # Добавляем продукты поочерёдно через add_product, чтобы корректно увеличить product_count
             for product in products:
                 self.add_product(product)
+
+        # Увеличиваем счётчик категорий
+        Category.category_count += 1
 
     def add_product(self, product: Product):
         """
@@ -146,17 +218,25 @@ class Category:
         Category.product_count += 1  # Прибавляем ровно 1 за каждый добавленный продукт
 
     @property
-    def products(self) -> str:
+    def products(self) -> List[Product]:
         """
-        Геттер для получения форматированного списка товаров.
+        Геттер для получения внутреннего списка товаров.
 
         Returns:
-            str: форматированная строка с информацией о товарах.
+            List[Product]: список объектов Product в категории.
         """
-        result = ""
-        for product in self.__products:
-            result += f"{product.name}, {product.price} руб. Остаток: {product.quantity} шт.\n"
-        return result
+        return [str(product) for product in self.__products]
+
+
+    @property
+    def products_list(self) -> List[Product]:
+        """
+        Геттер для получения внутреннего списка товаров (для обратной совместимости).
+
+        Returns:
+            List[Product]: список объектов Product в категории.
+        """
+        return self.__products
 
     def get_products_list(self) -> List[Product]:
         """
@@ -167,6 +247,29 @@ class Category:
         """
         return self.__products
 
+    def __str__(self) -> str:
+        """
+        Возвращает строковое представление категории.
+
+        Формат: "Название категории, количество продуктов: X шт.",
+        где X — сумма остатков всех продуктов в категории.
+
+        Returns:
+            str: форматированная строка с информацией о категории.
+        """
+        total_quantity = sum(product.quantity for product in self.__products)
+        return f"{self.name}, количество продуктов: {total_quantity} шт."
+
+    def __iter__(self) -> CategoryIterator:
+        """
+        Позволяет использовать категорию в цикле for для перебора товаров.
+
+        Пример: for product in category: print(product)
+
+        Returns:
+            CategoryIterator: итератор по товарам категории.
+        """
+        return CategoryIterator(self)
 
 def load_data_from_json(filename: str) -> List[Category]:
     """
@@ -174,7 +277,6 @@ def load_data_from_json(filename: str) -> List[Category]:
 
     Args:
         filename (str): путь к JSON‑файлу с данными.
-
     Returns:
         List[Category]: список объектов Category с загруженными данными.
     Raises:
@@ -203,11 +305,11 @@ def load_data_from_json(filename: str) -> List[Category]:
             for product_data in category_data["products"]:
                 product = Product(
                     name=product_data.get("name", "Без названия"),
-                    description=product_data.get("description", "Без описания"),
-                    price=product_data.get("price", 0.0),
-                    quantity=product_data.get("quantity", 0),
+            description=product_data.get("description", "Без описания"),
+            price=product_data.get("price", 0.0),
+            quantity=product_data.get("quantity", 0),
                 )
-                products.append(product)  # Теперь внутри цикла
+                products.append(product)
 
         category = Category(
             name=category_data.get("name", "Без названия"),
@@ -218,10 +320,10 @@ def load_data_from_json(filename: str) -> List[Category]:
 
     return categories
 
-
 if __name__ == "__main__":  # pragma: no cover
     """
     Демонстрационный блок для тестирования функциональности классов Product и Category.
+    Включает проверку новых методов: __str__, __add__ и итератора.
     """
     # Создаём товары
     product1 = Product(
@@ -238,15 +340,18 @@ if __name__ == "__main__":  # pragma: no cover
     )
 
     print("=== Изначальные товары в категории ===")
-    print(category1.products)
+    print([str(p) for p in category1.get_products_list()])
     print(f"Общее количество категорий: {Category.category_count}")
     print(f"Общее количество товаров во всех категориях: {Category.product_count}")
+
+
+    print(f"Строковое представление категории: {str(category1)}")
 
     # Добавляем новый товар
     product4 = Product('55" QLED 4K', "Фоновая подсветка", 123000.0, 7)
     category1.add_product(product4)
     print("\n=== После добавления телевизора ===")
-    print(category1.products)
+    print(f"Строковое представление категории: {str(category1)}")
     print(f"Общее количество товаров: {Category.product_count}")
 
     # Демонстрируем работу new_product с дубликатом
@@ -262,11 +367,30 @@ if __name__ == "__main__":  # pragma: no cover
     print(f"Новое количество: {result_product.quantity} шт.")  # 5 + 2 = 7
     print(f"Новая цена: {result_product.price} руб.")  # 190 000 руб. (выше старой)
 
+    # Тестируем строковое представление продуктов
+    print("\n=== Строковое представление отдельных продуктов ===")
+    for product in [product1, product2, product3, product4]:
+        print(str(product))
+
+    # Тестируем сложение продуктов
+    print("\n=== Тестирование сложения продуктов (__add__) ===")
+    total_value = product1 + product2
+    print(f"{product1.name} + {product2.name}: {total_value} руб.")
+    total_value_2 = product3 + product4
+    print(f"{product3.name} + {product4.name}: {total_value_2} руб.")
+
+    # Тестируем итератор
+    print("\n=== Итерация по товарам категории ===")
+    print("Перебираем все товары в категории 'Смартфоны':")
+    for idx, product in enumerate(category1, 1):
+        print(f"{idx}. {product}")
+
     # Тестируем изменение цены (снижение — должен запросить подтверждение)
     print("\n=== Тестируем снижение цены ===")
     print(f"Текущая цена {result_product.name}: {result_product.price} руб.")
     result_product.price = 170000.0  # Запрос подтверждения в консоли
     print(f"Итоговая цена: {result_product.price} руб.")
+
 
     # Тестируем недопустимые значения цены
     print("\n=== Тестируем недопустимые цены ===")
