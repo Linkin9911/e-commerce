@@ -5,7 +5,7 @@ from typing import List, Optional
 class CategoryIterator:
     """Итератор для перебора товаров в категории."""
 
-    def __init__(self, category: "Category"):
+    def __init__(self, category: "Category") -> None:
         self._products = category.get_products_list()
         self._index = 0
 
@@ -23,7 +23,9 @@ class CategoryIterator:
 class Product:
     """Класс для представления продукта в магазине."""
 
-    def __init__(self, name: str, description: str, price: float, quantity: int):
+    def __init__(
+        self, name: str, description: str, price: float, quantity: int
+    ) -> None:
         self.name = name
         self.description = description
         self.__price = price
@@ -34,7 +36,7 @@ class Product:
         return self.__price
 
     @price.setter
-    def price(self, value: float):
+    def price(self, value: float) -> None:
         if value <= 0:
             print("Цена не должна быть нулевая или отрицательная")
             return
@@ -58,8 +60,8 @@ class Product:
             for existing_product in products_list:
                 if existing_product.name == name:
                     existing_product.quantity += quantity
-                    if price > existing_product.price:
-                        existing_product.price = price
+            if price > existing_product.price:
+                existing_product.price = price
             return existing_product
 
         return cls(name, description, price, quantity)
@@ -87,7 +89,7 @@ class Smartphone(Product):
         model: str,
         memory: str,
         color: str,
-    ):
+    ) -> None:
         super().__init__(name, description, price, quantity)
         self.efficiency = efficiency
         self.model = model
@@ -118,7 +120,7 @@ class LawnGrass(Product):
         country: str,
         germination_period: str,
         color: str,
-    ):
+    ) -> None:
         super().__init__(name, description, price, quantity)
         self.country = country
         self.germination_period = germination_period
@@ -131,8 +133,8 @@ class LawnGrass(Product):
 
     def __str__(self) -> str:
         return (
-            f"{self.name} ({self.country}, {self.germination_period}, {self.color}), "
-            f"{self.price} руб. Остаток: {self.quantity} шт."
+            f"{self.name} ({self.country}, {self.germination_period}, "
+            f"{self.color}), {self.price} руб. Остаток: {self.quantity} шт."
         )
 
 
@@ -144,7 +146,7 @@ class Category:
 
     def __init__(
         self, name: str, description: str, products: Optional[List[Product]] = None
-    ):
+    ) -> None:
         if not name:
             raise ValueError("Название категории не может быть пустым")
         self.name = name
@@ -156,7 +158,7 @@ class Category:
                 self.add_product(product)
         Category.category_count += 1
 
-    def add_product(self, product: Product):
+    def add_product(self, product: Product) -> None:
         """Добавляет продукт в категорию."""
         if not isinstance(product, Product):
             raise TypeError(
@@ -204,13 +206,38 @@ def load_data_from_json(filename: str) -> List[Category]:
         products: List[Product] = []
         if "products" in category_data and category_data["products"]:
             for product_data in category_data["products"]:
-                product = Product(
-                    name=product_data.get("name", "Без названия"),
-                    description=product_data.get("description", "Без описания"),
-                    price=product_data.get("price", 0.0),
-                    quantity=product_data.get("quantity", 0),
-                )
-        products.append(product)
+                # Определяем тип продукта по наличию уникальных полей
+                if "country" in product_data:  # LawnGrass имеет поле country
+                    product: Product = LawnGrass(
+                        name=product_data.get("name", "Без названия"),
+                        description=product_data.get("description", "Без описания"),
+                        price=product_data.get("price", 0.0),
+                        quantity=product_data.get("quantity", 0),
+                        country=product_data.get("country", "Unknown"),
+                        germination_period=product_data.get(
+                            "germination_period", "Unknown"
+                        ),
+                        color=product_data.get("color", "Unknown"),
+                    )
+                elif "model" in product_data:  # Smartphone имеет поле model
+                    product = Smartphone(
+                        name=product_data.get("name", "Без названия"),
+                        description=product_data.get("description", "Без описания"),
+                        price=product_data.get("price", 0.0),
+                        quantity=product_data.get("quantity", 0),
+                        efficiency=product_data.get("efficiency", "средняя"),
+                        model=product_data.get("model", "Unknown"),
+                        memory=product_data.get("memory", "Unknown"),
+                        color=product_data.get("color", "Unknown"),
+                    )
+                else:  # Базовый Product
+                    product = Product(
+                        name=product_data.get("name", "Без названия"),
+                        description=product_data.get("description", "Без описания"),
+                        price=product_data.get("price", 0.0),
+                        quantity=product_data.get("quantity", 0),
+                    )
+                products.append(product)
 
         category = Category(
             name=category_data.get("name", "Без названия"),

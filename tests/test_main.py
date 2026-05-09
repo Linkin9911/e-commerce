@@ -59,9 +59,6 @@ def sample_lawn_grass() -> LawnGrass:
     )
 
 
-# --- Тесты для Product ---
-
-
 def test_product_initialization(sample_product: Product) -> None:
     """Проверяет корректность инициализации объекта Product."""
     assert sample_product.name == "Смартфон"
@@ -115,9 +112,6 @@ def test_product_price_setter_confirmation_no(mock_input, sample_product: Produc
     assert sample_product.price == original_price  # цена осталась прежней
 
 
-# --- Тесты для Smartphone ---
-
-
 def test_smartphone_initialization(sample_smartphone: Smartphone):
     """Проверяет корректность инициализации объекта Smartphone."""
     assert sample_smartphone.name == "iPhone 15"
@@ -142,7 +136,10 @@ def test_smartphone_str_representation(sample_smartphone: Smartphone):
 
 def test_lawn_grass_str_representation(sample_lawn_grass: LawnGrass):
     """Проверяет строковое представление объекта LawnGrass."""
-    expected = "Газонная трава Премиум (Россия, 14 дней, ярко‑зелёный), 2000.0 руб. Остаток: 20 шт."
+    expected = (
+        "Газонная трава Премиум (Россия, 14 дней, ярко‑зелёный), "
+        "2000.0 руб. Остаток: 20 шт."
+    )
     assert str(sample_lawn_grass) == expected
 
 
@@ -199,9 +196,6 @@ def test_lawn_grass_addition_different_type(
     )
 
 
-# --- Тесты для Category ---
-
-
 def test_category_initialization(sample_category: Category):
     """Проверяет корректность инициализации объекта Category."""
     assert sample_category.name == "Электроника"
@@ -250,9 +244,6 @@ def test_category_products_property(sample_category: Category):
     assert all(isinstance(p, str) for p in products_str)
 
 
-# --- Тесты для Product.new_product ---
-
-
 def test_new_product_create_new():
     """Проверяет создание нового продукта через new_product."""
     product_data = {
@@ -287,9 +278,6 @@ def test_new_product_update_existing():
     assert updated_product.price == 40000.0  # обновилась до максимальной
 
 
-# --- Тесты для load_data_from_json ---
-
-
 @patch("builtins.open", mock_open(read_data='{"categories": []}'))
 def test_load_data_empty_categories():
     """Проверяет загрузку данных с пустым списком категорий."""
@@ -299,24 +287,26 @@ def test_load_data_empty_categories():
 
 @patch(
     "builtins.open",
-    mock_open(read_data="""
-        {
-            "categories": [
-                {
-                    "name": "Электроника",
-            "description": "Электронные устройства",
-            "products": [
-                {
-                    "name": "Смартфон",
-            "description": "Современный смартфон",
-            "price": 29999.99,
-            "quantity": 10
-                }
-            ]
-        }
-            ]
-        }
-        """),
+    mock_open(
+        read_data=(
+            "{"
+            '  "categories": ['
+            "    {"
+            '      "name": "Электроника",'
+            '      "description": "Электронные устройства",'
+            '      "products": ['
+            "        {"
+            '          "name": "Смартфон",'
+            '          "description": "Современный смартфон",'
+            '          "price": 29999.99,'
+            '          "quantity": 10'
+            "        }"
+            "      ]"
+            "    }"
+            "  ]"
+            "}"
+        )
+    ),
 )
 def test_load_data_single_category():
     """Проверяет загрузку данных с одной категорией и одним продуктом."""
