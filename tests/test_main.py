@@ -3,8 +3,7 @@ from unittest.mock import mock_open, patch
 
 import pytest
 
-from src.main import (Category, LawnGrass, Product, Smartphone,
-                      load_data_from_json)
+from src.main import Category, LawnGrass, Product, Smartphone, load_data_from_json
 
 
 @pytest.fixture(autouse=True)
@@ -150,10 +149,17 @@ def test_lawn_grass_str_representation(sample_lawn_grass: LawnGrass):
 def test_smartphone_addition(sample_smartphone: Smartphone):
     """Проверяет сложение двух объектов Smartphone."""
     phone2 = Smartphone(
-        "Samsung S23", "Флагман Samsung", 11000.0, 3, "высокая", "S23", "128GB", "белый"
+        "Samsung S23",
+        "Флагман Samsung",
+        110000.0,
+        3,
+        "высокая",
+        "S23",
+        "128GB",
+        "белый",
     )
     total_value = sample_smartphone + phone2
-    expected_value = (120000.0 * 5) + (11000.0 * 3)  # 60 000 + 33 000
+    expected_value = (120000.0 * 5) + (110000.0 * 3)  # 600 000 + 330 000
     assert total_value == expected_value
 
 
@@ -191,6 +197,9 @@ def test_lawn_grass_addition_different_type(
     assert "Нельзя складывать газонную траву с другими типами товаров" in str(
         exc_info.value
     )
+
+
+# --- Тесты для Category ---
 
 
 def test_category_initialization(sample_category: Category):
