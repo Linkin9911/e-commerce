@@ -1,6 +1,7 @@
 import json
 from typing import List, Optional
 
+
 class CategoryIterator:
     """
     Итератор для перебора товаров в категории.
@@ -132,11 +133,10 @@ class Product:
                 if existing_product.name == name:
                     # Складываем количества
                     existing_product.quantity += quantity
-                    # Выбираем максимальную цену
-                    if price > existing_product.price:
-                        existing_product.price = price
+            # Выбираем максимальную цену
+            if price > existing_product.price:
+                existing_product.price = price
             return existing_product  # Возвращаем только найденный продукт
-
 
         # Если дубликат не найден, создаём новый продукт
         return cls(name, description, price, quantity)
@@ -169,6 +169,117 @@ class Product:
         return self.price * self.quantity + other.price * other.quantity
 
 
+class Smartphone(Product):
+    """
+    Класс для представления смартфонов.
+    Наследует от Product, добавляет специфические атрибуты.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        price: float,
+        quantity: int,
+        efficiency: str,
+        model: str,
+        memory: str,
+        color: str,
+    ):
+        """
+        Инициализирует объект Smartphone.
+
+        Args:
+            name (str): название смартфона.
+            description (str): описание смартфона.
+            price (float): цена смартфона.
+            quantity (int): количество смартфонов.
+            efficiency (str): производительность (например, «высокая»).
+            model (str): модель смартфона.
+            memory (str): объём памяти (например, «256 GB»).
+            color (str): цвет смартфона.
+        """
+        super().__init__(name, description, price, quantity)
+        self.efficiency = efficiency
+        self.model = model
+        self.memory = memory
+        self.color = color
+
+    def __add__(self, other: Product) -> float:  # ИЗМЕНЕНО: теперь принимает Product
+        """
+        Сложение двух смартфонов. Разрешено только для объектов одного типа.
+
+        Returns:
+            float: общая стоимость всех смартфонов на складе для двух объектов.
+        Raises:
+            TypeError: если пытаются сложить смартфоны с другими типами товаров.
+        """
+        if not isinstance(other, Smartphone):
+            raise TypeError("Нельзя складывать смартфоны с другими типами товаров")
+        return super().__add__(other)  # Используем реализацию родителя
+
+    def __str__(self) -> str:
+        """Возвращает строковое представление смартфона."""
+        return (
+            f"{self.name} ({self.model}, {self.memory}, {self.color}), "
+            f"{self.price} руб. Остаток: {self.quantity} шт."
+        )
+
+
+class LawnGrass(Product):
+    """
+    Класс для представления газонной травы.
+    Наследует от Product, добавляет специфические атрибуты.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        price: float,
+        quantity: int,
+        country: str,
+        germination_period: str,
+        color: str,
+    ):
+        """
+        Инициализирует объект LawnGrass.
+
+        Args:
+            name (str): название газонной травы.
+            description (str): описание газонной травы.
+            price (float): цена газонной травы.
+            quantity (int): количество газонной травы.
+            country (str): страна‑производитель.
+            germination_period (str): срок прорастания (например, «14 дней»).
+            color (str): цвет травы.
+        """
+        super().__init__(name, description, price, quantity)
+        self.country = country
+        self.germination_period = germination_period
+        self.color = color
+
+    def __add__(self, other: Product) -> float:
+        """
+        Сложение двух газонных трав. Разрешено только для объектов одного типа.
+
+        Returns:
+            float: общая стоимость всей газонной травы на складе для двух объектов.
+        Raises:
+            TypeError: если пытаются сложить газонную траву с другими типами товаров.
+        """
+        if not isinstance(other, LawnGrass):
+            raise TypeError("Нельзя складывать газонную траву с другими типами товаров")
+        return super().__add__(other)  # Используем реализацию родителя
+
+    def __str__(self) -> str:
+        """Возвращает строковое представление газонной травы."""
+        return (
+            f"{self.name} ({self.country}, {self.germination_period}, {self.color}), "
+            f"{self.price} руб. Остаток: {self.quantity} шт."
+        )
+
+
 class Category:
     """
     Класс для представления категории товаров.
@@ -197,7 +308,7 @@ class Category:
 
         self.name = name
         self.description = description
-        self.__products: List["Product"] = []  # Явная аннотация типа
+        self.__products: List[Product] = []  # Явная аннотация типа
 
         if products:
             # Добавляем продукты поочерёдно через add_product, чтобы корректно увеличить product_count
@@ -213,20 +324,26 @@ class Category:
 
         Args:
             product (Product): объект продукта для добавления.
+
+        Raises:
+            TypeError: если добавляемый объект не является экземпляром Product или его наследником.
         """
+        if not isinstance(product, Product):
+            raise TypeError(
+                "Можно добавлять только объекты класса Product или его наследников"
+            )
         self.__products.append(product)
-        Category.product_count += 1  # Прибавляем ровно 1 за каждый добавленный продукт
+        Category.product_count += 1
 
     @property
-    def products(self) -> List[Product]:
+    def products(self) -> List[str]:
         """
-        Геттер для получения внутреннего списка товаров.
+        Геттер для получения строковых представлений товаров.
 
         Returns:
-            List[Product]: список объектов Product в категории.
+            List[str]: список строковых представлений продуктов в категории.
         """
         return [str(product) for product in self.__products]
-
 
     @property
     def products_list(self) -> List[Product]:
@@ -271,6 +388,7 @@ class Category:
         """
         return CategoryIterator(self)
 
+
 def load_data_from_json(filename: str) -> List[Category]:
     """
     Загружает данные о категориях и товарах из JSON‑файла.
@@ -305,9 +423,9 @@ def load_data_from_json(filename: str) -> List[Category]:
             for product_data in category_data["products"]:
                 product = Product(
                     name=product_data.get("name", "Без названия"),
-            description=product_data.get("description", "Без описания"),
-            price=product_data.get("price", 0.0),
-            quantity=product_data.get("quantity", 0),
+                    description=product_data.get("description", "Без описания"),
+                    price=product_data.get("price", 0.0),
+                    quantity=product_data.get("quantity", 0),
                 )
                 products.append(product)
 
@@ -319,6 +437,7 @@ def load_data_from_json(filename: str) -> List[Category]:
         categories.append(category)
 
     return categories
+
 
 if __name__ == "__main__":  # pragma: no cover
     """
@@ -343,7 +462,6 @@ if __name__ == "__main__":  # pragma: no cover
     print([str(p) for p in category1.get_products_list()])
     print(f"Общее количество категорий: {Category.category_count}")
     print(f"Общее количество товаров во всех категориях: {Category.product_count}")
-
 
     print(f"Строковое представление категории: {str(category1)}")
 
@@ -391,10 +509,7 @@ if __name__ == "__main__":  # pragma: no cover
     result_product.price = 170000.0  # Запрос подтверждения в консоли
     print(f"Итоговая цена: {result_product.price} руб.")
 
-
     # Тестируем недопустимые значения цены
     print("\n=== Тестируем недопустимые цены ===")
     result_product.price = -100  # Ошибка
     print(f"Цена после попытки установить -100: {result_product.price} руб.")
-    result_product.price = 0  # Ошибка
-    print(f"Цена после попытки установить 0: {result_product.price} руб.")
