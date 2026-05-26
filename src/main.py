@@ -1,5 +1,28 @@
 import json
+from abc import ABC, abstractmethod
 from typing import List, Optional
+
+
+class BaseProduct(ABC):
+    @abstractmethod
+    def get_name(self) -> str:
+        """Возвращает название продукта."""
+        pass
+
+    @abstractmethod
+    def get_price(self) -> float:
+        """Возвращает цену продукта."""
+        pass
+
+    @abstractmethod
+    def get_quantity(self) -> int:
+        """Возвращает количество на складе."""
+        pass
+
+    @abstractmethod
+    def get_description(self) -> str:
+        """Возвращает описание продукта."""
+        pass
 
 
 class LoggingMixin:
@@ -9,13 +32,14 @@ class LoggingMixin:
         super().__init__(*args, **kwargs)
 
 
-class Product:
+class Product(BaseProduct):  # Указываем родителя
     # Счётчик продуктов
     product_count = 0
 
     def __init__(
         self, name: str, description: str, price: float, quantity: int
     ) -> None:
+        super().__init__()  # Вызываем инициализатор абстрактного родителя
         self.name = name
         self.description = description
         self._price = price

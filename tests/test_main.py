@@ -3,7 +3,14 @@ from unittest.mock import mock_open, patch
 
 import pytest
 
-from src.main import Category, LawnGrass, Product, Smartphone, load_data_from_json
+from src.main import (
+    BaseProduct,
+    Category,
+    LawnGrass,
+    Product,
+    Smartphone,
+    load_data_from_json,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -63,6 +70,31 @@ def sample_lawn_grass() -> LawnGrass:
 
 
 # --- Тесты для класса Product ---
+
+
+def test_product_is_instance_of_base_product(sample_product: Product):
+    """Проверяет, что Product наследуется от BaseProduct."""
+    assert isinstance(sample_product, BaseProduct)
+
+
+def test_product_implements_get_name(sample_product: Product):
+    """Проверяет реализацию метода get_name из BaseProduct."""
+    assert sample_product.get_name() == "Смартфон"
+
+
+def test_product_implements_get_price(sample_product: Product):
+    """Проверяет реализацию метода get_price из BaseProduct."""
+    assert sample_product.get_price() == 29999.99
+
+
+def test_product_implements_get_quantity(sample_product: Product):
+    """Проверяет реализацию метода get_quantity из BaseProduct."""
+    assert sample_product.get_quantity() == 10
+
+
+def test_product_implements_get_description(sample_product: Product):
+    """Проверяет реализацию метода get_description из BaseProduct."""
+    assert sample_product.get_description() == "Современный смартфон"
 
 
 def test_product_initialization(sample_product: Product) -> None:
