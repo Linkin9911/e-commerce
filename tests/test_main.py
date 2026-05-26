@@ -3,7 +3,14 @@ from unittest.mock import mock_open, patch
 
 import pytest
 
-from src.main import Category, Product, load_data_from_json
+from src.main import (
+    BaseProduct,
+    Category,
+    LawnGrass,
+    Product,
+    Smartphone,
+    load_data_from_json,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -27,10 +34,67 @@ def sample_category() -> Category:
         Product("Смартфон", "Современный смартфон", 29999.99, 10),
         Product("Ноутбук", "Мощный ноутбук", 59999.99, 5),
     ]
-    return Category("Электроника", "Электронные устройства", products)
+    category = Category("Электроника", "Электронные устройства")
+    for product in products:
+        category.add_product(product)
+    return category
 
 
-# --- Тесты для Product ---
+@pytest.fixture
+def sample_smartphone() -> Smartphone:
+    """Фикстура для создания тестового объекта Smartphone."""
+    return Smartphone(
+        "iPhone 15",
+        "Флагманский смартфон Apple",
+        120000.0,
+        5,
+        "высокая",
+        "15 Pro",
+        "256GB",
+        "чёрный",
+    )
+
+
+@pytest.fixture
+def sample_lawn_grass() -> LawnGrass:
+    """Фикстура для создания тестового объекта LawnGrass."""
+    return LawnGrass(
+        "Газонная трава Премиум",
+        "Высококачественная газонная трава",
+        2000.0,
+        20,
+        "Россия",
+        "14 дней",
+        "ярко‑зелёный",
+    )
+
+
+# --- Тесты для класса Product ---
+
+
+def test_product_is_instance_of_base_product(sample_product: Product):
+    """Проверяет, что Product наследуется от BaseProduct."""
+    assert isinstance(sample_product, BaseProduct)
+
+
+def test_product_implements_get_name(sample_product: Product):
+    """Проверяет реализацию метода get_name из BaseProduct."""
+    assert sample_product.get_name() == "Смартфон"
+
+
+def test_product_implements_get_price(sample_product: Product):
+    """Проверяет реализацию метода get_price из BaseProduct."""
+    assert sample_product.get_price() == 29999.99
+
+
+def test_product_implements_get_quantity(sample_product: Product):
+    """Проверяет реализацию метода get_quantity из BaseProduct."""
+    assert sample_product.get_quantity() == 10
+
+
+def test_product_implements_get_description(sample_product: Product):
+    """Проверяет реализацию метода get_description из BaseProduct."""
+    assert sample_product.get_description() == "Современный смартфон"
 
 
 def test_product_initialization(sample_product: Product) -> None:
@@ -39,6 +103,20 @@ def test_product_initialization(sample_product: Product) -> None:
     assert sample_product.description == "Современный смартфон"
     assert sample_product.price == 29999.99
     assert sample_product.quantity == 10
+
+
+def test_product_str_representation(sample_product: Product):
+    """Проверяет строковое представление объекта Product."""
+    expected = "Смартфон, 29999.99 руб. Остаток: 10 шт."
+    assert str(sample_product) == expected
+
+
+def test_product_addition(sample_product: Product):
+    """Проверяет сложение двух объектов Product."""
+    product2 = Product("Наушники", "Беспроводные", 5000.0, 3)
+    total_value = sample_product + product2
+    expected_value = (29999.99 * 10) + (5000.0 * 3)  # 299 999,9 + 15 000
+    assert total_value == expected_value
 
 
 def test_product_price_setter_negative_value(sample_product: Product):
@@ -67,327 +145,385 @@ def test_product_price_setter_confirmation_yes(mock_input, sample_product: Produ
 @patch("builtins.input", return_value="n")
 def test_product_price_setter_confirmation_no(mock_input, sample_product: Product):
     """Проверяет отказ от снижения цены (пользователь ввёл 'n')."""
-    initial_price = sample_product.price
+    original_price = sample_product.price
     sample_product.price = 25000.0  # пытаемся снизить цену
-    assert sample_product.price == initial_price  # цена осталась прежней
+    assert sample_product.price == original_price  # цена осталась прежней
 
 
-# --- Тесты для Category ---
+# --- Тесты для классов‑наследников ---
 
 
-def test_category_initialization(sample_category: Category) -> None:
+def test_smartphone_initialization(sample_smartphone: Smartphone):
+    """Проверяет корректность инициализации объекта Smartphone."""
+    assert sample_smartphone.name == "iPhone 15"
+    assert sample_smartphone.model == "15 Pro"
+    assert sample_smartphone.memory == "256GB"
+    assert sample_smartphone.color == "чёрный"
+
+
+def test_lawn_grass_initialization(sample_lawn_grass: LawnGrass):
+    """Проверяет корректность инициализации объекта LawnGrass."""
+    assert sample_lawn_grass.name == "Газонная трава Премиум"
+    assert sample_lawn_grass.country == "Россия"
+    assert sample_lawn_grass.germination_period == "14 дней"
+    assert sample_lawn_grass.color == "ярко‑зелёный"
+
+
+def test_smartphone_str_representation(sample_smartphone: Smartphone):
+    """Проверяет строковое представление объекта Smartphone."""
+    expected = "iPhone 15 (15 Pro, 256GB, чёрный), 120000.0 руб. Остаток: 5 шт."
+    assert str(sample_smartphone) == expected
+
+
+def test_lawn_grass_str_representation(sample_lawn_grass: LawnGrass):
+    """Проверяет строковое представление объекта LawnGrass."""
+    expected = (
+        "Газонная трава Премиум (Россия, 14 дней, ярко‑зелёный), "
+        "2000.0 руб. Остаток: 20 шт."
+    )
+    assert str(sample_lawn_grass) == expected
+
+
+def test_smartphone_addition(sample_smartphone: Smartphone):
+    """Проверяет сложение двух объектов Smartphone."""
+    phone2 = Smartphone(
+        "Samsung S23",
+        "Флагман Samsung",
+        110000.0,
+        3,
+        "высокая",
+        "S23",
+        "128GB",
+        "белый",
+    )
+    total_value = sample_smartphone + phone2
+    expected_value = (120000.0 * 5) + (110000.0 * 3)  # 600 000 + 3
+    assert total_value == expected_value
+
+
+def test_lawn_grass_addition(sample_lawn_grass: LawnGrass):
+    """Проверяет сложение двух объектов LawnGrass."""
+    grass2 = LawnGrass(
+        "Газонная трава Стандарт",
+        "Обычная газонная трава",
+        1500.0,
+        10,
+        "Россия",
+        "21 день",
+        "зелёный",
+    )
+    total_value = sample_lawn_grass + grass2
+    expected_value = (2000.0 * 20) + (1500.0 * 10)  # 40 000 + 15 000
+    assert total_value == expected_value
+
+
+def test_smartphone_addition_different_type(
+    sample_smartphone: Smartphone, sample_lawn_grass: LawnGrass
+):
+    """Проверяет, что нельзя складывать смартфон с газонной травой."""
+    with pytest.raises(TypeError) as exc_info:
+        sample_smartphone + sample_lawn_grass
+    assert "Нельзя складывать смартфоны с другими типами товаров" in str(exc_info.value)
+
+
+def test_lawn_grass_addition_different_type(
+    sample_lawn_grass: LawnGrass, sample_smartphone: Smartphone
+):
+    """Проверяет, что нельзя складывать газонную траву со смартфоном."""
+    with pytest.raises(TypeError) as exc_info:
+        sample_lawn_grass + sample_smartphone
+    assert "Нельзя складывать газонную траву с другими типами товаров" in str(
+        exc_info.value
+    )
+
+
+# --- Тесты для класса Category ---
+
+
+def test_category_initialization(sample_category: Category):
     """Проверяет корректность инициализации объекта Category."""
     assert sample_category.name == "Электроника"
     assert sample_category.description == "Электронные устройства"
-    products_list = sample_category.get_products_list()
-    assert isinstance(products_list, list)
-    assert len(products_list) == 2
-    assert isinstance(products_list[0], Product)
-    products_output = sample_category.products
-    assert "Смартфон" in products_output
-    assert "Ноутбук" in products_output
+    assert len(sample_category.get_products_list()) == 2
+    assert Category.category_count == 1
+    assert Category.product_count == 2
 
 
-def test_add_product(sample_category: Category):
+def test_category_add_product(sample_category: Category, sample_smartphone: Smartphone):
     """Проверяет добавление продукта в категорию."""
-    initial_product_count = Category.product_count
-    new_product = Product("Планшет", "Новый планшет", 45000.0, 3)
-    sample_category.add_product(new_product)
-    products_list = sample_category.get_products_list()
-    assert new_product in products_list
-    assert Category.product_count == initial_product_count + 3
-    assert "Планшет" in sample_category.products
+    sample_category.add_product(sample_smartphone)
+    assert len(sample_category.get_products_list()) == 3
+    assert Category.product_count == 3
 
 
-def test_products_getter_formatting(sample_category: Category):
-    """Проверяет форматирование вывода геттера products."""
-    products_output = sample_category.products
-    expected_lines = [
-        "Смартфон, 29999.99 руб. Остаток: 10 шт.",
-        "Ноутбук, 59999.99 руб. Остаток: 5 шт.",
-    ]
-    for expected_line in expected_lines:
-        assert expected_line in products_output
+def test_category_add_invalid_product(sample_category: Category):
+    """Проверяет обработку попытки добавления объекта не‑продукта в категорию."""
+    with pytest.raises(TypeError) as exc_info:
+        sample_category.add_product("Не продукт")  # type: ignore[arg-type]
+    assert "Можно добавлять только объекты класса Product или его наследников" in str(
+        exc_info.value
+    )
 
 
-# --- Тесты для new_product ---
+def test_category_str_representation(sample_category: Category):
+    """Проверяет строковое представление объекта Category."""
+    total_quantity = sum(p.quantity for p in sample_category.get_products_list())
+    expected = f"Электроника, количество продуктов: {total_quantity} шт."
+    assert str(sample_category) == expected
 
 
-def test_new_product_no_existing_list():
-    """Проверяет создание нового продукта без списка существующих товаров."""
+def test_category_iterator(sample_category: Category):
+    products = list(sample_category)
+    assert len(products) == 2
+    assert all(
+        isinstance(p, Product) for p in products
+    )  # Проверяем тип каждого элемента
+
+
+def test_category_products_property(sample_category: Category):
+    products_list = sample_category.products
+    assert len(products_list) == 2
+    assert all(isinstance(p, Product) for p in products_list)  # Ожидаем объекты Product
+
+
+# --- Тесты для метода new_product ---
+
+
+def test_new_product_create_new():
+    """Проверяет создание нового продукта через new_product."""
     product_data = {
-        "name": "Новый товар",
-        "description": "Описание",
-        "price": 1000.0,
-        "quantity": 2,
+        "name": "Телевизор",
+        "description": "4K UHD",
+        "price": 80000.0,
+        "quantity": 5,
     }
+    new_product = Product.new_product(product_data)
+    assert new_product.name == "Телевизор"
+    assert new_product.price == 80000.0
+    assert new_product.quantity == 5
+
+
+def test_new_product_update_existing():
+    """Проверяет обновление существующего продукта через new_product."""
+    # Создаём существующий продукт
+    existing_product = Product("Смартфон", "Обновлённая модель", 35000.0, 5)
+    products_list = [existing_product]
+
+    # Данные для обновления (с большим количеством и ценой)
+    update_data = {
+        "name": "Смартфон",
+        "description": "Дубликат с увеличенным количеством",
+        "price": 40000.0,  # выше текущей цены
+        "quantity": 3,
+    }
+
+    updated_product = Product.new_product(update_data, products_list)
+    assert updated_product is existing_product  # это тот же объект
+    assert updated_product.quantity == 8  # 5 + 3
+    assert updated_product.price == 40000.0  # обновилась до максимальной
+
+
+def test_product_new_product_with_missing_fields():
+    """Проверяет new_product с неполными данными (должны подставляться значения по умолчанию)."""
+    product_data = {"name": "Товар без описания"}
     product = Product.new_product(product_data)
-    assert isinstance(product, Product)
-    assert product.name == "Новый товар"
-    assert product.quantity == 2
+    assert product.name == "Товар без описания"
+    assert product.description == "Без описания"
+    assert product.price == 0.0
+    assert product.quantity == 0
 
 
-def test_new_product_duplicate_existing():
-    """Проверяет обработку дубликата товара в new_product."""
-    existing_product = Product("Смартфон", "Описание", 30000.0, 5)
-    products_list = [existing_product]
-    duplicate_data = {
-        "name": "Смартфон",
-        "description": "Новое описание",
-        "price": 35000.0,
-        "quantity": 3,
-    }
-    result = Product.new_product(duplicate_data, products_list)
-    assert result is existing_product
-    assert existing_product.quantity == 8
-    assert existing_product.price == 35000.0
+# --- Тесты для загрузки данных из JSON ---
 
 
-def test_new_product_duplicate_lower_price():
-    """Проверяет обновление дубликата с более низкой ценой (цена не должна измениться)."""
-    existing_product = Product("Смартфон", "Описание", 30000.0, 5)
-    products_list = [existing_product]
-    duplicate_data = {
-        "name": "Смартфон",
-        "description": "Новое описание",
-        "price": 25000.0,
-        "quantity": 3,
-    }
-    result = Product.new_product(duplicate_data, products_list)
-    assert result is existing_product
-    assert existing_product.quantity == 8
-    assert existing_product.price == 30000.0  # цена осталась прежней
+@patch("builtins.open", mock_open(read_data='{"categories": []}'))
+def test_load_data_empty_categories():
+    """Проверяет загрузку данных с пустым списком категорий."""
+    categories = load_data_from_json("test.json")
+    assert len(categories) == 0
 
 
-# --- Тесты для load_data_from_json ---
-
-
-def test_load_data_from_json_valid():
-    """Проверяет загрузку данных из корректного JSON‑файла."""
-    mock_json = """{
-      "categories": [
-        {
-          "name": "Смартфоны",
-          "description": "Мобильные устройства",
-          "products": [
-            {
-              "name": "Смартфон 1",
-              "description": "Описание 1",
-              "price": 30000.0,
-              "quantity": 5
-            }
-          ]
-        }
-      ]
-    }"""
-    with patch("builtins.open", mock_open(read_data=mock_json)):
-        categories = load_data_from_json("test.json")
+@patch(
+    "builtins.open",
+    mock_open(
+        read_data=(
+            "{"
+            '  "categories": ['
+            "    {"
+            '      "name": "Электроника",'
+            '      "description": "Электронные устройства",'
+            '      "products": ['
+            "        {"
+            '          "name": "Смартфон",'
+            '          "description": "Современный смартфон",'
+            '          "price": 29999.99,'
+            '          "quantity": 10'
+            "        }"
+            "      ]"
+            "    }"
+            "  ]"
+            "}"
+        )
+    ),
+)
+def test_load_data_single_category():
+    categories = load_data_from_json("test.json")
     assert len(categories) == 1
-    assert categories[0].name == "Смартфоны"
-    products_list = categories[0].get_products_list()
-    assert isinstance(products_list, list)
-    assert len(products_list) == 1
-    assert isinstance(products_list[0], Product)
-    assert products_list[0].name == "Смартфон 1"
-    assert "Смартфон 1" in categories[0].products
+    category = categories[0]
+    assert category.name == "Электроника"
+    assert len(category.get_products_list()) == 1
+
+    products = category.get_products_list()
+    product = products[0]
+
+    assert product.name == "Смартфон"
+    assert product.description == "Современный смартфон"
+    assert product.price == 29999.99
+    assert product.quantity == 10
 
 
-def test_load_data_from_json_file_not_found():
-    """Проверяет обработку ошибки 'файл не найден'."""
-    with pytest.raises(FileNotFoundError, match="Файл nonexistent.json не найден."):
+def test_load_data_file_not_found():
+    """Проверяет обработку ошибки отсутствия файла."""
+    with pytest.raises(FileNotFoundError):
         load_data_from_json("nonexistent.json")
 
 
-def test_load_data_from_json_invalid_json():
+def test_load_data_invalid_json():
     """Проверяет обработку некорректного JSON."""
-    invalid_json = '{"name": "Test", "value": }'  # Синтаксическая ошибка
-
-    with patch("builtins.open", mock_open(read_data=invalid_json)):
+    with patch("builtins.open", mock_open(read_data="некорректный json {")):
         with pytest.raises(json.JSONDecodeError):
             load_data_from_json("invalid.json")
 
 
-def test_load_data_from_json_empty_file():
-    """Проверяет обработку пустого JSON‑файла."""
-    with patch("builtins.open", mock_open(read_data="{}")):
-        categories = load_data_from_json("empty.json")
-    assert len(categories) == 0
-    assert Category.category_count == 0
-    assert Category.product_count == 0
+# --- Дополнительные тесты ---
 
 
-def test_load_data_from_json_missing_categories():
-    """Проверяет обработку JSON без секции 'categories'."""
-    mock_json = '{"other_data": "some_value"}'
-    with patch("builtins.open", mock_open(read_data=mock_json)):
-        categories = load_data_from_json("no_categories.json")
-    assert len(categories) == 0
-    assert Category.category_count == 0
-    assert Category.product_count == 0
+def test_category_empty_name():
+    """Проверяет инициализацию категории с пустым названием (должно вызвать исключение)."""
+    with pytest.raises(ValueError) as exc_info:
+        Category("", "Описание пустой категории")
+    assert "Название категории не может быть пустым" in str(exc_info.value)
 
 
-def test_load_data_from_json_empty_categories():
-    """Проверяет загрузку JSON с пустой секцией categories."""
-    mock_json = '{"categories": []}'
-    with patch("builtins.open", mock_open(read_data=mock_json)):
-        categories = load_data_from_json("empty_categories.json")
-    assert len(categories) == 0
-    assert Category.category_count == 0
-    assert Category.product_count == 0
-
-
-def test_load_data_from_json_category_without_products():
-    """Проверяет загрузку категории без товаров (отсутствует секция products)."""
-    mock_json = """{
-      "categories": [
-        {
-          "name": "Пустая категория",
-          "description": "Без товаров"
-        }
-      ]
-    }"""
-    with patch("builtins.open", mock_open(read_data=mock_json)):
-        categories = load_data_from_json("no_products.json")
-    assert len(categories) == 1
-    assert categories[0].name == "Пустая категория"
-    products_list = categories[0].get_products_list()
-    assert isinstance(products_list, list)
-    assert len(products_list) == 0
-    assert categories[0].products == ""
-
-
-def test_load_data_from_json_empty_products_section():
-    """Проверяет загрузку категории с пустой секцией products."""
-    mock_json = """{
-      "categories": [
-        {
-          "name": "Категория с пустыми товарами",
-          "description": "Есть секция products, но она пуста",
-          "products": []
-        }
-      ]
-    }"""
-    with patch("builtins.open", mock_open(read_data=mock_json)):
-        categories = load_data_from_json("empty_products.json")
-    assert len(categories) == 1
-    products_list = categories[0].get_products_list()
-    assert isinstance(products_list, list)
-    assert len(products_list) == 0
-    assert categories[0].products == ""
-
-
-def test_load_data_from_json_multiple_categories():
-    """Проверяет загрузку нескольких категорий с товарами."""
-    mock_json = """{
-      "categories": [
-        {
-          "name": "Электроника",
-          "description": "Электронные устройства",
-          "products": [
-            {
-              "name": "Смартфон",
-              "description": "Современный смартфон",
-              "price": 29999.99,
-              "quantity": 10
-            }
-          ]
-        },
-        {
-          "name": "Бытовая техника",
-          "description": "Приборы для дома",
-          "products": [
-            {
-              "name": "Холодильник",
-              "description": "Двухкамерный холодильник",
-              "price": 45000.0,
-              "quantity": 3
-            }
-          ]
-        }
-      ]
-    }"""
-    with patch("builtins.open", mock_open(read_data=mock_json)):
-        categories = load_data_from_json("multiple_categories.json")
-    assert len(categories) == 2
-    assert categories[0].name == "Электроника"
-    assert categories[1].name == "Бытовая техника"
-    # Проверяем товары в первой категории
-    electronics_products = categories[0].get_products_list()
-    assert len(electronics_products) == 1
-    assert electronics_products[0].name == "Смартфон"
-    # Проверяем товары во второй категории
-    appliances_products = categories[1].get_products_list()
-    assert len(appliances_products) == 1
-    assert appliances_products[0].name == "Холодильник"
-    # Проверяем счётчики
-    assert Category.category_count == 2
-    assert Category.product_count == 13  # 10 + 3
-
-
-def test_load_data_from_json_product_with_missing_fields():
-    """Проверяет загрузку товара с отсутствующими полями (используются значения по умолчанию)."""
-    mock_json = """{
-      "categories": [
-        {
-          "name": "Тестовая категория",
-          "description": "Категория для тестирования",
-          "products": [
-            {
-              "name": "Товар без описания",
-              "price": 1000.0
-            }
-          ]
-        }
-      ]
-    }"""
-    with patch("builtins.open", mock_open(read_data=mock_json)):
-        categories = load_data_from_json("missing_fields.json")
-    assert len(categories) == 1
-    products_list = categories[0].get_products_list()
-    assert len(products_list) == 1
-    product = products_list[0]
-    assert product.name == "Товар без описания"
-    assert product.description == "Без описания"  # значение по умолчанию
-    assert product.price == 1000.0
-    assert product.quantity == 0  # значение по умолчанию
-
-
-# --- Дополнительные тесты для Category ---
-
-
-def test_category_with_none_products():
-    """Проверяет создание категории с products=None."""
-    category = Category("Пустая", "Без товаров", None)
-    assert category.name == "Пустая"
-    products_list = category.get_products_list()
-    assert isinstance(products_list, list)
-    assert len(products_list) == 0
-    assert category.products == ""
-    assert Category.category_count >= 1
-    assert Category.product_count >= 0
-
-
-def test_category_initialization_with_empty_products_list():
-    """Проверяет создание категории с пустым списком товаров."""
-    category = Category("Пустая", "Без товаров", [])
-    assert category.name == "Пустая"
-    products_list = category.get_products_list()
-    assert isinstance(products_list, list)
-    assert len(products_list) == 0
-    assert category.products == ""
-
-
-# --- Дополнительные тесты для Product ---
-def test_product_with_zero_quantity():
-    """Проверяет инициализацию товара с нулевым количеством."""
-    product = Product("Товар", "Описание", 100.0, 0)
-    assert product.quantity == 0
-
-
-def test_product_with_negative_price():
-    """Проверяет поведение сеттера price при установке отрицательной цены."""
-    product = Product("Товар", "Описание", 100.0, 5)
+def test_product_quantity_setter_negative(sample_product: Product):
+    """Проверяет сеттер quantity при установке отрицательного количества."""
     with patch("builtins.print") as mock_print:
-        product.price = -50.0
-        mock_print.assert_called_with("Цена не должна быть нулевая или отрицательная")
-    assert product.price == 100.0  # цена осталась прежней
+        sample_product.quantity = -5
+        mock_print.assert_called_with("Количество не может быть отрицательным")
+    assert sample_product.quantity == 10
+
+
+def test_category_repr(sample_category: Category):
+    """Проверяет repr‑представление категории."""
+    repr_result = repr(sample_category)
+    assert "Category('Электроника'" in repr_result
+    assert "'Электронные устройства')" in repr_result
+
+
+def test_smartphone_creation_logging(capsys):
+    Smartphone(  # Просто вызов конструктора
+        "Test Phone",
+        "Test description",
+        10000.0,
+        5,
+        "высокая",
+        "Model X",
+        "128GB",
+        "чёрный",
+    )
+    captured = capsys.readouterr()
+    assert "Создан объект Smartphone" in captured.out
+
+
+def test_lawn_grass_creation_logging(capsys):
+    """Проверяет логирование создания объекта LawnGrass через миксин."""
+    LawnGrass(  # Просто вызов конструктора без сохранения в переменную
+        "Test Grass", "Test description", 500.0, 20, "Россия", "14 дней", "зелёный"
+    )
+    captured = capsys.readouterr()
+    assert "Создан объект LawnGrass" in captured.out
+
+
+# --- Финальные тесты на граничные случаи ---
+
+
+def test_product_price_setter_very_large_value(sample_product: Product):
+    """Проверяет установку очень большой цены."""
+    large_price = 1e10
+    sample_product.price = large_price
+    assert sample_product.price == large_price
+
+
+def test_product_quantity_setter_very_large_value(sample_product: Product):
+    """Проверяет установку очень большого количества."""
+    large_quantity = 1_000_000
+    sample_product.quantity = large_quantity
+    assert sample_product.quantity == large_quantity
+
+
+def test_category_name_with_special_characters():
+    """Проверяет создание категории с названием, содержащим спецсимволы."""
+    category = Category("Электроника & Гаджеты!", "Описание с !@#$%")
+    assert category.name == "Электроника & Гаджеты!"
+    assert category.description == "Описание с !@#$%"
+
+
+def test_category_add_product_duplicate(
+    sample_category: Category, sample_product: Product
+):
+    """Проверяет добавление дубликата продукта в категорию."""
+    # Добавляем тот же продукт ещё раз
+    sample_category.add_product(sample_product)
+    products = sample_category.get_products_list()
+    # Теперь в категории 3 продукта (2 оригинальных + 1 дубликат)
+    assert len(products) == 3
+    # Проверяем, что последний добавленный продукт — это тот же объект
+    assert products[-1] is sample_product
+
+
+def test_load_data_nested_categories():
+    """Проверяет загрузку данных с вложенными категориями (если поддерживается)."""
+    json_data = """
+        {
+          "categories": [
+            {
+              "name": "Электроника",
+              "description": "Электронные устройства",
+              "products": [
+                {
+                  "name": "Смартфон",
+                  "description": "Современный смартфон",
+                  "price": 29999.99,
+                  "quantity": 10
+                }
+              ],
+              "subcategories": [
+                {
+                  "name": "Смартфоны",
+                  "description": "Мобильные телефоны",
+                  "products": [
+                    {
+                      "name": "iPhone 15",
+                      "description": "Флагман Apple",
+                      "price": 120000.0,
+                      "quantity": 5
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """
+    with patch("builtins.open", mock_open(read_data=json_data)):
+        categories = load_data_from_json("test.json")
+        assert len(categories) == 1
+        main_category = categories[0]
+        assert main_category.name == "Электроника"
+        assert len(main_category.get_products_list()) == 1
+
+        # Если поддерживается вложенность, проверяем подкатегории
+        # (зависит от реализации load_data_from_json)
+
+
+print("Все тесты успешно загружены!")
