@@ -1,174 +1,347 @@
 import json
-from typing import List, Optional
+from typing import List
+
+
+class ZeroQuantityError(Exception):
+    """Исключение для товаров с нулевым или отрицательным количеством."""
+
+    pass
 
 
 class Product:
-    """
-    Класс для представления товара.
-
-    Attributes:
-        name (str): название товара.
-        description (str): описание товара.
-        price (float): цена товара.
-        quantity (int): количество товара на складе.
-    """
+    product_count = 0
 
     def __init__(self, name: str, description: str, price: float, quantity: int):
-        """
-        Инициализирует объект Product.
-
-        Args:
-            name (str): название товара.
-            description (str): описание товара.
-            price (float): цена товара.
-            quantity (int): количество товара на складе.
-        """
-        self.name = name
+        if not name or not name.strip():
+            raise ValueError("Имя товара не может быть пустым")
+        self.name = name.strip()
         self.description = description
         self.price = price
-        self.quantity = quantity
+        if quantity <= 0:
+            raise ZeroQuantityError(
+                "Товар с нулевым или отрицательным количеством не может быть добавлен"
+            )
+        self._quantity = quantity
+
+        # Увеличиваем счётчик при создании продукта
+        Product.product_count += 1
+
+    @property
+    def name(self) -> str:
+        """Геттер для имени товара."""
+        return self._name
+
+    @name.setter
+    def name(self, value: str):
+        """Сеттер для имени товара с валидацией."""
+        if not value or not value.strip():
+            raise ValueError("Имя товара не может быть пустым")
+        self._name = value.strip()
+
+    @property
+    def price(self) -> float:
+        return self._price
+
+    @price.setter
+    def price(self, value: float):
+        if value < 0:
+            print("Цена не должна быть нулевая или отрицательная")
+            raise ValueError("Цена не должна быть нулевая или отрицательная")
+        self._price = value
+
+    @property
+    def quantity(self) -> int:
+        return self._quantity
+
+    @quantity.setter
+    def quantity(self, value: int):
+        if value <= 0:
+            raise ZeroQuantityError(
+                "Товар с нулевым или отрицательным количеством не может быть добавлен"
+            )
+        self._quantity = value
+
+    def __add__(self, other: "Product") -> "Product":
+        if not isinstance(other, Product):
+            raise TypeError("Можно складывать только товары одного типа")
+
+        total_qty = self.quantity + other.quantity
+        new_price = (
+            self.price * self.quantity + other.price * other.quantity
+        ) / total_qty
+
+        # Создаем новый объект с усредненной ценой и суммарным количеством
+        # Имя и описание берем от первого, так как это агрегированный товар
+        return Product(
+            f"Агрегат: {self.name}/{other.name}",
+            f"{self.description} + {other.description}",
+            new_price,
+            total_qty,
+        )
+
+    def __str__(self):
+        return f"{self.name}, {self.price} руб., {self.quantity} шт."
+
+    def __repr__(self):
+        return f"Product('{self.name}', {self.price}, {self.quantity})"
+
+
+class Smartphone(Product):
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        price: float,
+        quantity: int,
+        performance: str,
+        model: str,
+        memory: str,
+        color: str,
+    ):
+        super().__init__(name, description, price, quantity)
+        self.performance: str = performance
+        self.model: str = model
+        self.memory: str = memory
+        self.color: str = color
+
+    def __add__(self, other: Product) -> Product:
+        if not isinstance(other, Smartphone):
+            raise TypeError("Можно складывать только смартфоны")
+
+        total_qty = self.quantity + other.quantity
+        new_price = (
+            self.price * self.quantity + other.price * other.quantity
+        ) / total_qty
+
+        return Smartphone(
+            f"Агрегат: {self.name}/{other.name}",
+            f"{self.description} + {other.description}",
+            new_price,
+            total_qty,
+            self.performance,
+            self.model,
+            self.memory,
+            self.color,
+        )
+
+    def __str__(self):
+        return f"{self.name} ({self.model}, {self.memory}, {self.color}), {self.price} руб., {self.quantity} шт."
+
+
+class LawnGrass(Product):
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        price: float,
+        quantity: int,
+        country: str,
+        germination_period: str,
+        color: str,
+    ):
+        super().__init__(name, description, price, quantity)
+        self.country = country
+        self.germination_period = germination_period
+        self.color = color
+
+    def __add__(self, other: Product) -> Product:
+        if not isinstance(other, LawnGrass):
+            raise TypeError("Можно складывать только газонную траву")
+
+        total_qty = self.quantity + other.quantity
+        new_price = (
+            self.price * self.quantity + other.price * other.quantity
+        ) / total_qty
+
+        return LawnGrass(
+            f"Агрегат: {self.name}/{other.name}",
+            f"{self.description} + {other.description}",
+            new_price,
+            total_qty,
+            self.country,
+            self.germination_period,
+            self.color,
+        )
+
+    def __str__(self):
+        return f"{self.name} ({self.country}, {self.germination_period}, {self.color}), {self.price} руб., {self.quantity} шт."
 
 
 class Category:
-    """
-    Класс для представления категории товаров.
-
-    Attributes:
-        name (str): название категории.
-        description (str): описание категории.
-        products (List[Product]): список товаров в категории.
-
-    Class Attributes:
-        category_count (int): общее количество созданных категорий.
-        product_count (int): общее количество товаров во всех категориях.
-    """
-
-    category_count: int = 0
-    product_count: int = 0
-
-    def __init__(
-        self, name: str, description: str, products: Optional[List[Product]] = None
-    ):
-        """
-        Инициализирует объект Category.
-
-        Args:
-            name (str): название категории.
-            description (str): описание категории.
-            products (Optional[List[Product]], optional): список товаров в категории. По умолчанию — пустой список.
-        """
-        if products is None:
-            products = []
-
+    def __init__(self, name: str, description: str = ""):
+        if not name or not name.strip():
+            raise ValueError("Название категории не может быть пустым")
         self.name = name
         self.description = description
-        self.products = products
+        self._products: List[Product] = []
 
-        # Увеличиваем счётчик категорий
-        Category.category_count += 1
-        # Увеличиваем счётчик товаров на сумму количеств всех товаров в текущей категории
-        Category.product_count += sum(product.quantity for product in products)
+    def add_product(self, product: Product):
+        if not isinstance(product, Product):
+            raise TypeError("Можно добавлять только объекты Product")
+        # Теперь безопасно обращаться к атрибутам
+        print(f"Попытка добавить товар: {product.name}")
+        self._products.append(product)
 
+    def average_price(self) -> float:
+        if not self._products:
+            return 0.0
 
-def load_data_from_json(filename: str) -> List[Category]:
-    """
-    Загружает данные о категориях и товарах из JSON‑файла и создаёт объекты классов.
+        total_cost = sum(p.price * p.quantity for p in self._products)
+        total_qty = sum(p.quantity for p in self._products)
 
-    Args:
-        filename (str): путь к JSON‑файлу.
+        return total_cost / total_qty if total_qty > 0 else 0.0
 
-    Returns:
-        List[Category]: список объектов Category, созданных на основе данных из файла.
+    def __len__(self):
+        return len(self._products)
 
-    Raises:
-        FileNotFoundError: если файл не найден.
-        json.JSONDecodeError: если файл содержит некорректный JSON.
-        KeyError: если в JSON отсутствуют ожидаемые ключи.
-    """
-    try:
-        with open(filename, "r", encoding="utf-8") as file:
-            data = json.load(file)
-    except FileNotFoundError:
-        raise FileNotFoundError(f"Файл {filename} не найден.")
-    except json.JSONDecodeError as e:
-        raise json.JSONDecodeError(
-            f"Некорректный JSON в файле {filename}: {e}", e.doc, e.pos
+    def __iter__(self):
+        return iter(self._products)
+
+    def __getitem__(self, index: int) -> Product:
+        return self._products[index]
+
+    def __str__(self):
+        return f"{self.name}, количество товаров: {len(self._products)} шт."
+
+    def __repr__(self):
+        return f"Category('{self.name}', '{self.description}', {len(self)} products)"
+
+    @classmethod
+    def load_data_from_json(cls, file_path: str) -> "Category":
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except json.JSONDecodeError as e:
+            raise e
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Файл не найден: {file_path}")
+
+        categories_data = data.get("categories", [])
+
+        if not categories_data:
+            return cls("Пустая категория", "Нет данных")
+
+        cat_data = categories_data[0]
+
+        category = cls(
+            cat_data.get("name", "Без имени"), cat_data.get("description", "")
         )
 
-    categories: List[Category] = []
+        products_data = cat_data.get("products", [])
 
-    # Безопасная обработка отсутствия ключа 'categories'
-    if "categories" not in data:
-        return categories
+        # ✅ ДОБАВЛЕНА ЭТА СТРОКА: явно говорим, что product может быть любым Product
+        product: Product
 
-    for category_data in data["categories"]:
-        products: List[Product] = []
-        # Безопасная обработка отсутствия ключа 'products'
-        if "products" in category_data:
-            for product_data in category_data["products"]:
-                product = Product(
-                    name=product_data.get("name", "Без названия"),
-                    description=product_data.get("description", "Без описания"),
-                    price=product_data.get("price", 0.0),
-                    quantity=product_data.get("quantity", 0),
+        for product_data in products_data:
+            product_type = product_data.get("product_type")
+            if product_type == "smartphone":
+                product = Smartphone(
+                    name=product_data["name"],
+                    description=product_data["description"],
+                    price=product_data["price"],
+                    quantity=product_data["quantity"],
+                    performance=product_data.get("performance", ""),
+                    # Добавил дефолтные значения, чтобы mypy не ругался на None
+                    model=product_data.get("model", ""),
+                    memory=product_data.get("memory", ""),
+                    color=product_data.get("color", ""),
                 )
-                products.append(product)
+            elif product_type == "lawngrass":
+                product = LawnGrass(
+                    name=product_data["name"],
+                    description=product_data["description"],
+                    price=product_data["price"],
+                    quantity=product_data["quantity"],
+                    country=product_data.get("country", ""),
+                    germination_period=product_data.get("germination_period", ""),
+                    color=product_data.get("color", ""),
+                )
+            else:
+                product = Product(
+                    name=product_data["name"],
+                    description=product_data["description"],
+                    price=product_data["price"],
+                    quantity=product_data["quantity"],
+                )
+            category.add_product(product)
 
-        category = Category(
-            name=category_data.get("name", "Без названия"),
-            description=category_data.get("description", "Без описания"),
-            products=products,
-        )
-        categories.append(category)
+        return category
 
-    return categories
+
+class Order:
+    def __init__(self, product: Product, quantity: int):
+        if quantity < 0:
+            raise ValueError("Количество товара в заказе не может быть отрицательным")
+        if quantity == 0:
+            raise ValueError("Количество товара в заказе не может быть нулевым")
+        if quantity > product.quantity:
+            raise ValueError("Недостаточно товара на складе")
+
+        self.product = product
+        self.quantity = quantity
+
+    @property
+    def total_cost(self):
+        return self.product.price * self.quantity
 
 
 if __name__ == "__main__":  # pragma: no cover
-    product1 = Product(
-        "Samsung Galaxy S23 Ultra", "256GB, Серый цвет, 200MP камера", 180000.0, 5
-    )
+    # Блок main для ручного тестирования
+    try:
+        # Тест валидации количества
+        invalid_product = Product("Бракованный товар", "Описание", 100.0, 0)
+    except ZeroQuantityError as e:
+        print(f"Поймана ожидаемая ошибка: {e}")
+
+    # Создание товаров
+    product1 = Product("Samsung Galaxy S23 Ultra", "256GB, Серый цвет", 180000.0, 5)
     product2 = Product("Iphone 15", "512GB, Gray space", 210000.0, 8)
-    product3 = Product("Xiaomi Redmi Note 11", "1024GB, Синий", 31000.0, 14)
 
-    print(product1.name)
-    print(product1.description)
-    print(product1.price)
-    print(product1.quantity)
+    category1 = Category("Смартфоны", "Категория смартфонов")
+    category1.add_product(product1)
+    category1.add_product(product2)
 
-    print(product2.name)
-    print(product2.description)
-    print(product2.price)
-    print(product2.quantity)
-
-    print(product3.name)
-    print(product3.description)
-    print(product3.price)
-    print(product3.quantity)
-
-    category1 = Category(
-        "Смартфоны",
-        "Смартфоны, как средство не только коммуникации, но и получения дополнительных функций для удобства жизни",
-        [product1, product2, product3],
+    print(
+        f"Средний ценник в категории 'Смартфоны': {category1.average_price():.2f} руб."
     )
+    print(f"Строковое представление категории: {category1}")
 
-    print(category1.name == "Смартфоны")
-    print(category1.description)
-    print(len(category1.products))
-    print(Category.category_count)
-    print(Category.product_count)
-
-    product4 = Product('55" QLED 4K', "Фоновая подсветка", 123000.0, 7)
-    category2 = Category(
-        "Телевизоры",
-        "Современный телевизор, который позволяет наслаждаться просмотром, станет вашим другом и помощником",
-        [product4],
+    # Тест сложения смартфонов — только смартфоны!
+    smartphone1: Smartphone = Smartphone(
+        "iPhone", "Смартфон", 1000.0, 2, "высокая", "15 Pro", "256GB", "серый"
     )
+    smartphone2: Smartphone = Smartphone(
+        "Galaxy", "Смартфон", 900.0, 3, "высокая", "S23", "512GB", "чёрный"
+    )
+    result_smartphone: Product = smartphone1 + smartphone2  # результат — Product
+    print(f"Результат сложения смартфонов: {result_smartphone}")
 
-    print(category2.name)
-    print(category2.description)
-    print(len(category2.products))
-    print(category2.products)
+    # Тест сложения газонной травы — только газонная трава!
+    grass1: LawnGrass = LawnGrass(
+        "Газон 1", "Трава", 500.0, 10, "Россия", "14 дней", "зелёный"
+    )
+    grass2: LawnGrass = LawnGrass(
+        "Газон 2", "Трава премиум", 600.0, 15, "Россия", "21 день", "тёмно‑зелёный"
+    )
+    result_grass: Product = grass1 + grass2  # результат — Product
+    print(f"Результат сложения газонной травы: {result_grass}")
 
-    print(Category.category_count)
-    print(Category.product_count)
+    # Тест заказа
+    try:
+        order = Order(product1, 2)
+        print(f"Стоимость заказа: {order.total_cost} руб.")
+    except ValueError as e:
+        print(f"Ошибка при создании заказа: {e}")
+
+    # Демонстрация работы с коллекцией разных продуктов
+    print("\n--- Демонстрация коллекции разных продуктов ---")
+    products: list[Product] = [smartphone1, grass1, product1]
+
+    for product in products:
+        print(f"{product.name}, {product.price} руб., {product.quantity} шт.")
+
+        # Если нужен доступ к специфичным атрибутам — проверяем тип
+        if isinstance(product, Smartphone):
+            print(f"  Модель: {product.model}, Память: {product.memory}")
+        elif isinstance(product, LawnGrass):
+            print(f"  Страна: {product.country}, Цвет: {product.color}")
